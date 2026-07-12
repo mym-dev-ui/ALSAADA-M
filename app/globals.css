@@ -11,6 +11,11 @@
 
 @layer base {
   * { box-sizing: border-box; }
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
   body {
     font-family: 'Almarai', sans-serif;
     direction: rtl;
@@ -18,7 +23,14 @@
     color: #fff;
     -webkit-font-smoothing: antialiased;
   }
-  html { scroll-behavior: smooth; }
+}
+
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 .hero-glow {

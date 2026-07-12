@@ -53,7 +53,7 @@ export default function RegisterPage() {
   }
 
   const selectCls = (err?: string) =>
-    `w-full border rounded-xl px-4 py-3.5 text-sm text-right appearance-none bg-white focus:outline-none transition-colors ${err ? "border-red-400" : "border-gray-300 focus:border-[#0c6e3e]"} text-gray-700`;
+    `w-full border rounded-xl px-4 py-3.5 text-base md:text-sm text-right appearance-none bg-white focus:outline-none transition-colors ${err ? "border-red-400" : "border-gray-300 focus:border-[#0c6e3e]"} text-gray-700`;
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
@@ -116,7 +116,7 @@ export default function RegisterPage() {
           <div id="f-delivery_date">
             <label className="block text-xs font-bold text-gray-600 mb-1.5">تاريخ التوصيل <span className="text-red-400">*</span></label>
             <input type="date" value={data.delivery_date} onChange={set("delivery_date")} min={new Date().toISOString().split("T")[0]}
-              className={`w-full border rounded-xl px-4 py-3.5 text-sm bg-white focus:outline-none transition-colors text-gray-700 ${errors.delivery_date ? "border-red-400" : "border-gray-300 focus:border-[#0c6e3e]"}`}
+              className={`w-full border rounded-xl px-4 py-3.5 text-base md:text-sm bg-white focus:outline-none transition-colors text-gray-700 ${errors.delivery_date ? "border-red-400" : "border-gray-300 focus:border-[#0c6e3e]"}`}
             />
             {errors.delivery_date && <p className="text-red-500 text-xs mt-1">{errors.delivery_date}</p>}
           </div>
