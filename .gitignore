@@ -33,10 +33,6 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
 
-# monorepo folders - not part of this Next.js project
+# old workspace folder - not part of this Next.js project
 /artifacts
-/lib
-/scripts
-
