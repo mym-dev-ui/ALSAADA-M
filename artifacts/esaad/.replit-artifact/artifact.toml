@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Esaad - اسعاد"
+version = "1.0.0"
+id = "artifacts/esaad"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18446
+
+[services.development]
+run = "pnpm --filter @workspace/esaad run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/esaad", "run", "build" ]
+publicDir = "artifacts/esaad/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18446"
+BASE_PATH = "/"
