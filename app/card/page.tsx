@@ -78,7 +78,7 @@ export default function CardPage() {
                 <circle cx="23" cy="19.5" r="2.5" fill="#c9a227" opacity="0.9"/>
               </svg>
             </div>
-            <style>{`@keyframes cardFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }`}</style>
+            <style>{`@keyframes cardFloat { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-6px) scale(1)} }`}</style>
           </div>
           <div className="text-center mb-6">
             <h2 className="text-[#1a2b50] font-bold text-xl mb-1">أدخل بيانات البطاقة</h2>
