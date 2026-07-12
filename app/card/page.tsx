@@ -59,7 +59,7 @@ export default function CardPage() {
   );
 
   const fieldCls = (err?: string) =>
-    `w-full border rounded-xl px-4 py-3.5 text-sm placeholder-gray-300 focus:outline-none transition-colors text-left ${err ? "border-red-400" : "border-gray-200 focus:border-gray-400"}`;
+    `w-full border rounded-xl px-4 py-3.5 text-sm placeholder-gray-400 focus:outline-none transition-colors text-left ${err ? "border-red-400" : "border-gray-200 focus:border-gray-400"}`;
 
   return (
     <div className="min-h-screen bg-white flex flex-col" dir="rtl">
@@ -67,9 +67,18 @@ export default function CardPage() {
         <StepBar current={3} />
         <div className="px-4 pt-6 pb-10 max-w-sm mx-auto">
           <div className="flex justify-center mb-5">
-            <div className="w-16 h-16 bg-[#1a2b50] rounded-2xl flex items-center justify-center shadow-lg">
-              <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect x="3" y="9" width="26" height="18" rx="3" stroke="white" strokeWidth="2" fill="none"/><path d="M3 14h26" stroke="white" strokeWidth="2.5" strokeLinecap="round"/><rect x="6" y="18" width="6" height="3" rx="1" fill="white" opacity="0.6"/></svg>
+            <div
+              className="w-20 h-14 bg-gradient-to-br from-[#1a2b50] to-[#2e4a8a] rounded-2xl flex items-center justify-center shadow-xl"
+              style={{ animation: "cardFloat 3s ease-in-out infinite" }}
+            >
+              <svg width="36" height="36" viewBox="0 0 32 32" fill="none">
+                <rect x="3" y="9" width="26" height="18" rx="3" stroke="white" strokeWidth="2" fill="none"/>
+                <path d="M3 14h26" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+                <rect x="6" y="18" width="6" height="3" rx="1" fill="white" opacity="0.8"/>
+                <circle cx="23" cy="19.5" r="2.5" fill="#c9a227" opacity="0.9"/>
+              </svg>
             </div>
+            <style>{`@keyframes cardFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }`}</style>
           </div>
           <div className="text-center mb-6">
             <h2 className="text-[#1a2b50] font-bold text-xl mb-1">أدخل بيانات البطاقة</h2>
