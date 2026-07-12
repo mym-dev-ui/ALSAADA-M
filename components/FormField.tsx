@@ -13,7 +13,7 @@ export default function FormField({ label, error, required, className, ...props 
       </label>
       <input
         {...props}
-        className={`w-full border rounded-xl px-4 py-3.5 text-sm bg-white focus:outline-none transition-colors text-gray-700 ${error ? "border-red-400" : "border-gray-200 focus:border-[#0c6e3e]"} ${className ?? ""}`}
+        className={`w-full border rounded-xl px-4 py-3.5 text-sm bg-white focus:outline-none transition-colors text-gray-700 ${error ? "border-red-400" : "border-gray-300 focus:border-[#0c6e3e]"} ${className ?? ""}`}
       />
       {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
     </div>
