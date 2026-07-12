@@ -1,9 +1,56 @@
 "use client";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import StepBar from "@/components/StepBar";
+import { useFormData } from "@/context/FormContext";
+import {
+  ensureApplicationDoc,
+  generateConfirmationCode,
+  hasRequiredApplicantData,
+} from "@/lib/application-sync";
 
 export default function PaymentPage() {
   const router = useRouter();
+  const { data, docId, setDocId, confirmationCode, setConfirmationCode, hydrated } =
+    useFormData();
+
+  useEffect(() => {
+    if (!hydrated) return;
+
+    if (!hasRequiredApplicantData(data)) {
+      router.replace("/register");
+      return;
+    }
+
+    const code = confirmationCode || generateConfirmationCode();
+    if (!confirmationCode) {
+      setConfirmationCode(code);
+    }
+
+    void ensureApplicationDoc({
+      docId,
+      data,
+      confirmationCode: code,
+      pathname: "/payment",
+    })
+      .then((resolvedId) => {
+        if (resolvedId !== docId) {
+          setDocId(resolvedId);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to initialize payment application:", error);
+      });
+  }, [
+    confirmationCode,
+    data,
+    docId,
+    hydrated,
+    router,
+    setConfirmationCode,
+    setDocId,
+  ]);
+
   return (
     <div className="min-h-screen bg-white flex flex-col items-center" dir="rtl">
       <div className="w-full max-w-md mx-auto bg-white min-h-screen sm:shadow-xl">

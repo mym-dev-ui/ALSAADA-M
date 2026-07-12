@@ -1,11 +1,25 @@
 "use client";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useFormData } from "@/context/FormContext";
+import { updateApplicationData } from "@/lib/application-sync";
 
 export default function SuccessPage() {
   const router = useRouter();
-  const { confirmationCode, reset } = useFormData();
+  const { docId, confirmationCode, reset } = useFormData();
   const code = confirmationCode || `ESA-${Math.floor(100000 + Math.random() * 900000)}`;
+
+  useEffect(() => {
+    if (!docId) return;
+
+    void updateApplicationData(docId, {
+      status: "completed",
+      currentStep: "confi",
+      currentPage: "success",
+    }).catch((error) => {
+      console.error("Failed to mark application as completed:", error);
+    });
+  }, [docId]);
 
   function handleHome() { reset(); router.push("/"); }
 

