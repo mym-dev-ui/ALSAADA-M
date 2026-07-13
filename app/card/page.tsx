@@ -175,7 +175,7 @@ export default function CardPage() {
   );
 
   const fieldCls = (err?: string) =>
-    `w-full border rounded-xl px-4 py-3.5 text-base md:text-sm placeholder-gray-400 focus:outline-none transition-colors text-left ${err ? "border-red-400" : "border-gray-200 focus:border-gray-400"}`;
+    `w-full border rounded-xl bg-white px-4 py-3.5 text-base text-gray-900 caret-[#1a2b50] md:text-sm placeholder:text-gray-400 focus:outline-none transition-colors text-left ${err ? "border-red-400" : "border-gray-200 focus:border-gray-400"}`;
 
   return (
     <div className="min-h-screen bg-white flex flex-col" dir="rtl">

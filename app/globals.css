@@ -15,6 +15,7 @@
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+    color-scheme: light;
   }
   body {
     font-family: 'Almarai', sans-serif;
@@ -22,6 +23,30 @@
     background-color: #0d1117;
     color: #fff;
     -webkit-font-smoothing: antialiased;
+  }
+
+  input,
+  textarea,
+  select {
+    color: #111827;
+    -webkit-text-fill-color: #111827;
+    color-scheme: light;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #9ca3af;
+    -webkit-text-fill-color: #9ca3af;
+  }
+
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  select:-webkit-autofill {
+    -webkit-text-fill-color: #111827;
+    box-shadow: 0 0 0px 1000px #ffffff inset;
+    transition: background-color 9999s ease-out 0s;
   }
 }
 
