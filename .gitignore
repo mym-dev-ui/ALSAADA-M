@@ -36,3 +36,4 @@ yarn-error.log*
 
 # old workspace folder - not part of this Next.js project
 /artifacts
+.env*

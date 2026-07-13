@@ -5,6 +5,10 @@ import { ChevronRight, ChevronDown, Loader2 } from "lucide-react";
 import StepBar from "@/components/StepBar";
 import FormField from "@/components/FormField";
 import { useFormData } from "@/context/FormContext";
+import {
+  ensureApplicationDoc,
+  generateConfirmationCode,
+} from "@/lib/application-sync";
 
 const EMIRATES = ["دبي","أبوظبي","الشارقة","عجمان","رأس الخيمة","الفجيرة","أم القيوين"];
 
@@ -14,9 +18,17 @@ function validateDate(v: string) { if (!v) return false; return new Date(v) >= n
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { data, setField } = useFormData();
+  const {
+    data,
+    setField,
+    docId,
+    setDocId,
+    confirmationCode,
+    setConfirmationCode,
+  } = useFormData();
   const [errors, setErrors] = useState<Partial<Record<keyof typeof data, string>>>({});
   const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const set = (k: keyof typeof data) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setField(k, e.target.value);
@@ -40,6 +52,8 @@ export default function RegisterPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setSubmitError("");
+
     const errs = validate();
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
@@ -47,9 +61,33 @@ export default function RegisterPage() {
       document.getElementById(`f-${firstKey}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
+
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 600));
-    router.push("/payment");
+
+    try {
+      const code = confirmationCode || generateConfirmationCode();
+      if (!confirmationCode) {
+        setConfirmationCode(code);
+      }
+
+      const resolvedDocId = await ensureApplicationDoc({
+        docId,
+        data,
+        confirmationCode: code,
+        pathname: "/register",
+      });
+
+      if (resolvedDocId !== docId) {
+        setDocId(resolvedDocId);
+      }
+
+      await new Promise((r) => setTimeout(r, 600));
+      router.push("/payment");
+    } catch (error) {
+      console.error("Failed to create register application:", error);
+      setSubmitError("تعذر حفظ الطلب حالياً. حاول مرة أخرى.");
+      setLoading(false);
+    }
   }
 
   const selectCls = (err?: string) =>
@@ -120,6 +158,7 @@ export default function RegisterPage() {
             />
             {errors.delivery_date && <p className="text-red-500 text-xs mt-1">{errors.delivery_date}</p>}
           </div>
+          {submitError && <p className="text-red-500 text-xs text-center">{submitError}</p>}
           <button type="submit" disabled={loading} className="w-full py-4 mt-2 text-base font-bold rounded-2xl text-white transition-all duration-200 hover:opacity-90 active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2" style={{ background: "linear-gradient(135deg, #0c6e3e 0%, #7cb342 100%)" }}>
             {loading ? <><Loader2 size={18} className="animate-spin" />جاري المعالجة...</> : "متابعة"}
           </button>
